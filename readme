@@ -1,1 +1,51 @@
-test
+# PCI BAR memory benchmark
+
+`pci_bar_bench` maps a PCIe BAR exposed by Linux sysfs, such as
+`/sys/bus/pci/devices/0000:88:00.0/resource1` or `resource1_wc`, and measures
+read/write latency plus streaming bandwidth for multiple packet sizes.
+
+> **Warning:** BAR writes can change device state. Write tests require
+> `--unsafe-writes` so you must explicitly confirm that the selected BAR range is
+> safe for arbitrary test patterns. Use `--read-only` for non-destructive tests.
+
+## Build
+
+```sh
+make
+```
+
+## Examples
+
+Read-only tests against the default device and BAR:
+
+```sh
+sudo ./pci_bar_bench --read-only
+```
+
+Use the write-combining sysfs mapping and CSV output:
+
+```sh
+sudo ./pci_bar_bench --wc --unsafe-writes --csv
+```
+
+Specify the BAR path directly, choose an offset/range, and test packet sizes from
+4 bytes to 1 MiB:
+
+```sh
+sudo ./pci_bar_bench \
+  --path /sys/bus/pci/devices/0000:88:00.0/resource1_wc \
+  --offset 0 --map-size 16M \
+  --sizes 4,8,16,32,64,128,256,512,1K,2K,4K,8K,16K,64K,256K,1M \
+  --seconds 2 --unsafe-writes
+```
+
+## Useful options
+
+* `--device 0000:88:00.0 --bar 1` selects `/sys/bus/pci/devices/<BDF>/resource<N>`.
+* `--wc` selects `resource<N>_wc` instead of `resource<N>`.
+* `--path PATH` uses an explicit sysfs resource path and overrides device/BAR/WC selection.
+* `--sizes LIST` sets comma-separated packet sizes. `K`, `M`, and `G` suffixes are accepted.
+* `--latency-iters N` controls latency repetitions per packet size.
+* `--seconds SEC` controls minimum bandwidth test duration when `--bw-iters` is not set.
+* `--read-only` and `--write-only` restrict the operation type.
+* `--verify` reads back the first packet after write tests and reports compare errors.
